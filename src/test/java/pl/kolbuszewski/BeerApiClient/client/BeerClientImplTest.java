@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import pl.kolbuszewski.BeerApiClient.config.WebClientConfig;
 import pl.kolbuszewski.BeerApiClient.model.BeerDto;
 import pl.kolbuszewski.BeerApiClient.model.BeerPagedList;
@@ -122,7 +123,18 @@ public class BeerClientImplTest {
 
     @Test
     void deleteBeerById() {
+        Mono<BeerPagedList> beerPagedListMono = beerClient.listBeers(null, null, null, null, null);
+        BeerPagedList pagedList = beerPagedListMono.block();
 
+        UUID id = pagedList.getContent()
+                           .get(0)
+                           .getId();
+
+        Mono<ResponseEntity<Void>> responseEntityMono = beerClient.deleteBeer(id);
+
+        ResponseEntity<Void> responseEntity = responseEntityMono.block();
+        Assertions.assertThat(responseEntity.getStatusCode())
+                  .isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
@@ -141,4 +153,22 @@ public class BeerClientImplTest {
         System.out.println(beerDto.toString());
     }
 
+    @Test
+    void testDeleteBeerHandleException() {
+        Mono<ResponseEntity<Void>> responseEntityMono = beerClient.deleteBeer(UUID.randomUUID());
+
+        ResponseEntity<Void> responseEntity = responseEntityMono.onErrorResume(throwable -> {
+            if (throwable instanceof WebClientResponseException) {
+                WebClientResponseException exception = (WebClientResponseException) throwable;
+                return Mono.just(ResponseEntity.status(exception.getRawStatusCode())
+                                               .build());
+            } else {
+                throw new RuntimeException(throwable);
+            }
+        })
+                                                                .block();
+
+        Assertions.assertThat(responseEntity.getStatusCode())
+                  .isEqualTo(HttpStatus.NOT_FOUND);
+    }
 }
