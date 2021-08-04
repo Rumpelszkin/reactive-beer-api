@@ -12,7 +12,7 @@ import reactor.netty.transport.logging.AdvancedByteBufFormat;
 public class WebClientConfig {
 
     @Bean
-    public WebClient webClient(){
+    public WebClient webClient() {
         return WebClient.builder()
                         .baseUrl(WebclientProperties.BASE_URL)
                         .clientConnector(new ReactorClientHttpConnector(HttpClient.create()
