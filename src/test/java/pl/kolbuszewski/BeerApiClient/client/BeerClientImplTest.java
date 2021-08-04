@@ -53,10 +53,15 @@ public class BeerClientImplTest {
 
     @Test
     void getBeerById(){
-        Mono<BeerDto> beerDtoMono = beerClient.getBeerById(UUID.fromString("d2053939-34dc-47a1-a55d-9bda489041ac"),null);
+        Mono<BeerPagedList> beerPagedListMono = beerClient.listBeers(null,null,null,null,null);
+        BeerPagedList pagedList = beerPagedListMono.block();
+        UUID beerId = pagedList.getContent().get(0).getId();
+
+
+        Mono<BeerDto> beerDtoMono = beerClient.getBeerById(beerId,null);
         BeerDto beerDto = beerDtoMono.block();
 
-        Assertions.assertThat(beerDto).isNotNull();
+        Assertions.assertThat(beerDto.getId()).isEqualTo(beerId);
         System.out.println(beerDto.toString());
     }
 
@@ -74,7 +79,15 @@ public class BeerClientImplTest {
     }
     @Test
     void getBeerByUPC(){
+        Mono<BeerPagedList> beerPagedListMono = beerClient.listBeers(null,null,null,null,null);
+        BeerPagedList pagedList = beerPagedListMono.block();
+        String upc = pagedList.getContent().get(0).getUpc();
 
+        Mono<BeerDto> beerDtoMono = beerClient.getBeerByUPC(upc);
+        BeerDto beerDto = beerDtoMono.block();
+
+        Assertions.assertThat(beerDto.getUpc()).isEqualTo(upc);
+        System.out.println(beerDto.toString());
     }
 
 }
