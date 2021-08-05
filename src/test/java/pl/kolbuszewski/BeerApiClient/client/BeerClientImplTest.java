@@ -1,7 +1,6 @@
 package pl.kolbuszewski.BeerApiClient.client;
 
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -14,6 +13,10 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class BeerClientImplTest {
 
@@ -30,11 +33,11 @@ public class BeerClientImplTest {
 
         BeerPagedList pagedList = beerPagedListMono.block();
 
-        Assertions.assertThat(pagedList)
-                  .isNotNull();
-        Assertions.assertThat(pagedList.getContent()
-                                       .size())
-                  .isGreaterThan(0);
+        assertThat(pagedList)
+                .isNotNull();
+        assertThat(pagedList.getContent()
+                            .size())
+                .isGreaterThan(0);
 
     }
 
@@ -44,11 +47,11 @@ public class BeerClientImplTest {
 
         BeerPagedList pagedList = beerPagedListMono.block();
 
-        Assertions.assertThat(pagedList)
-                  .isNotNull();
-        Assertions.assertThat(pagedList.getContent()
-                                       .size())
-                  .isEqualTo(10);
+        assertThat(pagedList)
+                .isNotNull();
+        assertThat(pagedList.getContent()
+                            .size())
+                .isEqualTo(10);
 
     }
 
@@ -58,11 +61,11 @@ public class BeerClientImplTest {
 
         BeerPagedList pagedList = beerPagedListMono.block();
 
-        Assertions.assertThat(pagedList)
-                  .isNotNull();
-        Assertions.assertThat(pagedList.getContent()
-                                       .size())
-                  .isEqualTo(0);
+        assertThat(pagedList)
+                .isNotNull();
+        assertThat(pagedList.getContent()
+                            .size())
+                .isEqualTo(0);
 
     }
 
@@ -78,8 +81,8 @@ public class BeerClientImplTest {
         Mono<BeerDto> beerDtoMono = beerClient.getBeerById(beerId, null);
         BeerDto beerDto = beerDtoMono.block();
 
-        Assertions.assertThat(beerDto.getId())
-                  .isEqualTo(beerId);
+        assertThat(beerDto.getId())
+                .isEqualTo(beerId);
         System.out.println(beerDto.toString());
     }
 
@@ -95,8 +98,8 @@ public class BeerClientImplTest {
         Mono<ResponseEntity<Void>> responseEntityMono = beerClient.createBeer(beerDto);
         ResponseEntity responseEntity = responseEntityMono.block();
 
-        Assertions.assertThat(responseEntity.getStatusCode())
-                  .isEqualTo(HttpStatus.CREATED);
+        assertThat(responseEntity.getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
     }
 
     @Test
@@ -116,8 +119,8 @@ public class BeerClientImplTest {
 
         Mono<ResponseEntity<Void>> responseEntityMono = beerClient.updateBeer(beerDto.getId(), updatedBeer);
         ResponseEntity<Void> responseEntity = responseEntityMono.block();
-        Assertions.assertThat(responseEntity.getStatusCode())
-                  .isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(responseEntity.getStatusCode())
+                .isEqualTo(HttpStatus.NO_CONTENT);
 
     }
 
@@ -133,8 +136,8 @@ public class BeerClientImplTest {
         Mono<ResponseEntity<Void>> responseEntityMono = beerClient.deleteBeer(id);
 
         ResponseEntity<Void> responseEntity = responseEntityMono.block();
-        Assertions.assertThat(responseEntity.getStatusCode())
-                  .isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(responseEntity.getStatusCode())
+                .isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
@@ -148,19 +151,20 @@ public class BeerClientImplTest {
         Mono<BeerDto> beerDtoMono = beerClient.getBeerByUPC(upc);
         BeerDto beerDto = beerDtoMono.block();
 
-        Assertions.assertThat(beerDto.getUpc())
-                  .isEqualTo(upc);
+        assertThat(beerDto.getUpc())
+                .isEqualTo(upc);
         System.out.println(beerDto.toString());
     }
 
     @Test
+        // way to handle WebClientResponseException passing Mono
     void testDeleteBeerHandleException() {
         Mono<ResponseEntity<Void>> responseEntityMono = beerClient.deleteBeer(UUID.randomUUID());
 
         ResponseEntity<Void> responseEntity = responseEntityMono.onErrorResume(throwable -> {
             if (throwable instanceof WebClientResponseException) {
                 WebClientResponseException exception = (WebClientResponseException) throwable;
-                return Mono.just(ResponseEntity.status(exception.getRawStatusCode())
+                return Mono.just(ResponseEntity.status(exception.getStatusCode())
                                                .build());
             } else {
                 throw new RuntimeException(throwable);
@@ -168,7 +172,17 @@ public class BeerClientImplTest {
         })
                                                                 .block();
 
-        Assertions.assertThat(responseEntity.getStatusCode())
-                  .isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(responseEntity.getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test // way to handle WebClientResponseException in Test
+    void testDeleteBeerByIdException() {
+        Mono<ResponseEntity<Void>> responseEntityMono = beerClient.deleteBeer(UUID.randomUUID());
+
+        assertThrows(WebClientResponseException.class, () -> {
+            ResponseEntity<Void> responseEntity = responseEntityMono.block();
+            assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        });
     }
 }
