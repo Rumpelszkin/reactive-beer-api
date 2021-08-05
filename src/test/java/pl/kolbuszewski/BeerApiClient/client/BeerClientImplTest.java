@@ -13,6 +13,8 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -154,6 +156,25 @@ public class BeerClientImplTest {
         assertThat(beerDto.getUpc())
                 .isEqualTo(upc);
         System.out.println(beerDto.toString());
+    }
+
+    @Test
+    void functionaTestGetBeerById() throws InterruptedException {
+        AtomicReference<String> beerName = new AtomicReference<>();
+        CountDownLatch countDownLatch = new CountDownLatch(1);  // used in multithreading env
+
+        beerClient.listBeers(null,null,null,null,null)
+                  .map(beerPagedList -> beerPagedList.getContent().get(0).getId())
+                  .map(beerId -> beerClient.getBeerById(beerId, false))
+                  .flatMap(mono -> mono)
+                  .subscribe(beerDto -> {
+                      beerName.set(beerDto.getBeerName());
+                      countDownLatch.countDown(); // decrement
+                  });
+
+        countDownLatch.await(); // waits till countDownLatch equals 0
+
+      //  assertThat(beerName.get()).isEqualTo("Mango Bobs");
     }
 
     @Test
